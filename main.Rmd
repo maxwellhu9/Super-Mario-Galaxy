@@ -3,17 +3,105 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
 ```{r}
-plot(cars)
+library(tidyverse)
+library(janitor)
+library(stringr)
+library(DataExplorer)
+library(funModeling)
+
+movies <- read.csv()
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+##Data Cleaning
+```{r}
+#Converting the indicator variables to factors
+movies$IsVideoGame <- as.factor(movies$IsVideoGame)
+movies$IsSpringRelease <- as.factor(movies$IsSpringRelease)
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+#log-transformed variables
+movies$logDomestic <- log(movies$Domestic)
+movies$logPrev <- log(movies$logPrevFilmDomestic)
+movies$logBudget <- log(movies$Budget)
+
+#Sequel ratio
+movies$SequelRatio <- movies$DomesticTotal / movies$PrevFilmDomestic
+```
+
+##Exploratory Data Analysis
+
+Plot 1: Raw Data
+```{r}
+par(mfrow = c(1,1))
+plot(DomesticTotal ~ PrevFilmDomestic, data = movies, 
+     main = "Sequel Domestic Gross vs. Predecessor Gross")
+      xlab = "Previous Film Domestic Total ($M)"
+      ylab = "Sequel Domestic Total ($M)"
+
+abline(lm(DomesticTotal ~ PrevFilmDomestic, data = movies),
+       col = "red", lwd = 2)
+abline(a = 0, b = 1, col = "gray", lty = 2, lwd = 1)
+```
+
+Plot 2: Log~Log scale
+```{r}
+plot(logDomesticTotal ~ logPrev, data = movies,
+     main ="Log Sequel Gross vs. Log Predecessor Gross",
+     xlab = "log(Previous Film Domestic Total)",
+     ylab = "log(Sequel Domestic Total)")
+     
+     
+abline(lm(logDomestic ~ logPrev, data = movies), col = "red", lwd = 2)
+```
+
+Plot 3: Sequel Ratio Dist.
+```{r}
+hist(movies$SequelRatio, breaks = 12,
+     main = "Distribution of Sequel Ratios",
+     xlab = "Sequel Ratio", col = "lightblue", border = "white")
+
+abline(v = 1, col = "red", lty = 2, lwd = 2)
+abline(v = median(movies$SequelRatio), col = "blue", lty = 2, lwd = 2)
+
+```
+
+
+
+
+
+
+
+
+
+
+EDA - Exploratory Data Analysis:
+```{r}
+glimpse(movies)
+summary(movies)
+```
+
+##Data Cleaning:
+
+```{r}
+
+```
+
+
+Remove duplicate rows:
+```{r}
+movies <- movies[!duplicated(movies), ]
+```
+
+Drop rows with NAs in key variables:
+```{r}
+movies <- movies |>
+  drop_na()
+```
+
+
+##Data Transformation:
+```{r}
+
+```
 
