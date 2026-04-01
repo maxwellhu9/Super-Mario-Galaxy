@@ -10,98 +10,106 @@ library(stringr)
 library(DataExplorer)
 library(funModeling)
 
-movies <- read.csv()
+movies <- read.csv('/Users/tracy/STOR 455/Super-Mario-Galaxy/data/Animated Movies - Sheet1.csv') |> 
+  clean_names()
 ```
 
-
-##Data Cleaning
-```{r}
-#Converting the indicator variables to factors
-movies$IsVideoGame <- as.factor(movies$IsVideoGame)
-movies$IsSpringRelease <- as.factor(movies$IsSpringRelease)
-
-#log-transformed variables
-movies$logDomestic <- log(movies$Domestic)
-movies$logPrev <- log(movies$logPrevFilmDomestic)
-movies$logBudget <- log(movies$Budget)
-
-#Sequel ratio
-movies$SequelRatio <- movies$DomesticTotal / movies$PrevFilmDomestic
-```
-
-##Exploratory Data Analysis
-
-Plot 1: Raw Data
-```{r}
-par(mfrow = c(1,1))
-plot(DomesticTotal ~ PrevFilmDomestic, data = movies, 
-     main = "Sequel Domestic Gross vs. Predecessor Gross")
-      xlab = "Previous Film Domestic Total ($M)"
-      ylab = "Sequel Domestic Total ($M)"
-
-abline(lm(DomesticTotal ~ PrevFilmDomestic, data = movies),
-       col = "red", lwd = 2)
-abline(a = 0, b = 1, col = "gray", lty = 2, lwd = 1)
-```
-
-Plot 2: Log~Log scale
-```{r}
-plot(logDomesticTotal ~ logPrev, data = movies,
-     main ="Log Sequel Gross vs. Log Predecessor Gross",
-     xlab = "log(Previous Film Domestic Total)",
-     ylab = "log(Sequel Domestic Total)")
-     
-     
-abline(lm(logDomestic ~ logPrev, data = movies), col = "red", lwd = 2)
-```
-
-Plot 3: Sequel Ratio Dist.
-```{r}
-hist(movies$SequelRatio, breaks = 12,
-     main = "Distribution of Sequel Ratios",
-     xlab = "Sequel Ratio", col = "lightblue", border = "white")
-
-abline(v = 1, col = "red", lty = 2, lwd = 2)
-abline(v = median(movies$SequelRatio), col = "blue", lty = 2, lwd = 2)
-
-```
-
-
-
-
-
-
-
-
-
-
-EDA - Exploratory Data Analysis:
 ```{r}
 glimpse(movies)
-summary(movies)
 ```
-
-##Data Cleaning:
-
 ```{r}
-
+colnames(movies) <- movies[1, ]
+movies <- movies [-1, ]
+movies <- movies[ , !names(movies) == "NA"]
+glimpse(movies)
 ```
 
 
-Remove duplicate rows:
-```{r}
-movies <- movies[!duplicated(movies), ]
-```
-
-Drop rows with NAs in key variables:
 ```{r}
 movies <- movies |>
-  drop_na()
+  mutate(across(c(DomesticTotal, PrevFilmDomestic, Budget, Year), as.numeric)) |> 
+  mutate(across(c(IsVideoGame, IsSpringRelease), as.factor))
+
+movies$logDomesticTotal <- log(movies$Domestic)
+movies$logPrevFilmDomestic <- log(movies$PrevFilmDomestic)
+movies$logBudget <- log(movies$Budget)
+
+glimpse(movies)
 ```
 
-
-##Data Transformation:
 ```{r}
+write.csv(movies, '/Users/tracy/STOR 455/Super-Mario-Galaxy/data/cleaned_movies.csv', row.names = FALSE)
 
+head(movies)
 ```
+
+#Linear Regression Analysis:
+
+Best subsets:
+```{r}
+library(leaps)
+best_subset <- regsubsets(logDomesticTotal ~ logPrevFilmDomestic + Year + IsVideoGame + IsSpringRelease + logBudget, data = movies, nvmax = 5)
+sub_summary <- summary(best_subset)
+sub_summary
+
+data.frame(
+  Predictors = 1:5,
+  AdjR2      = round(sub_summary$adjr2, 4),
+  Cp         = round(sub_summary$cp, 4),
+  BIC        = round(sub_summary$bic, 4)
+)
+```
+Interpretation: It appears that a model with 2 predictors is the most optimal. Has lowest Cp and BIC, second highest R^2. The jump from predictors 2 to 3 is very small for R^2. 
+
+
+```{r}
+# Quadratics (only continuous variables make sense)
+model_q1 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logPrevFilmDomestic^2), data = movies)
+model_q2 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logBudget^2), data = movies)
+
+# Interaction between the two winning predictors
+model_int <- lm(logDomesticTotal ~ logPrevFilmDomestic * logBudget, data = movies)
+
+# Base model to test against
+model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)
+
+anova(model_base, model_q1)   # does logPrev² help?
+anova(model_base, model_q2)   # does logBudget² help?
+anova(model_base, model_int)  # does the interaction help?
+
+model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)
+```
+Interpretation: Final model is logDomesticTotal ~ logPrevFilmDomestic + logBudget
+
+```{r}
+library(car)
+vif(model_base)
+
+par(mfrow = c(2,2))
+plot(model_base)
+
+cooksd <- cooks.distance(model_base)
+plot(cooksd, type = "h", main = "Cook's Distance")
+abline(h = 4/nrow(movies), col = "red", lty = 2)
+text(which(cooksd > 4/nrow(movies)),
+     cooksd[cooksd > 4/nrow(movies)],
+     labels = movies$Movie[cooksd > 4/nrow(movies)], cex = 0.7, pos = 4)
+
+shapiro.test(residuals(model_base))
+```
+
+```{r}
+mario_new <- data.frame(
+  logPrevFilmDomestic = log(574930000),
+  logBudget = log(175000000)
+)
+pred <- predict(model_base, newdata = mario_new,
+                interval = "prediction", level = 0.95)
+
+full_run <- exp(pred)
+day30_prediction <- full_run * 0.80  # adjust this ratio based on your data
+day30_prediction
+```
+
+
 
