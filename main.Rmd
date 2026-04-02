@@ -17,43 +17,29 @@ movies <- read.csv('/Users/tracy/STOR 455/Super-Mario-Galaxy/data/Animated Movie
 ```{r}
 glimpse(movies)
 ```
-```{r}
-colnames(movies) <- movies[1, ]
-movies <- movies [-1, ]
-movies <- movies[ , !names(movies) == "NA"]
-glimpse(movies)
-```
-
 
 ```{r}
 movies <- movies |>
-  mutate(across(c(DomesticTotal, PrevFilmDomestic, Budget, Year), as.numeric)) |> 
-  mutate(across(c(IsVideoGame, IsSpringRelease), as.factor))
+  mutate(across(c(domestic_total, prev_film_domestic, budget, year), as.numeric)) |>
+  mutate(across(c(is_video_game, is_spring_release), as.factor))
 
-movies$logDomesticTotal <- log(movies$Domestic)
-movies$logPrevFilmDomestic <- log(movies$PrevFilmDomestic)
-movies$logBudget <- log(movies$Budget)
+movies$log_domestic <- log(movies$domestic_total)
+movies$log_prev <- log(movies$prev_film_domestic)
+movies$log_budget <- log(movies$budget)
 
 glimpse(movies)
 ```
 
-```{r}
-write.csv(movies, '/Users/tracy/STOR 455/Super-Mario-Galaxy/data/cleaned_movies.csv', row.names = FALSE)
-
-head(movies)
-```
 
 #Linear Regression Analysis:
-
 Best subsets:
 ```{r}
 library(leaps)
-best_subset <- regsubsets(logDomesticTotal ~ logPrevFilmDomestic + Year + IsVideoGame + IsSpringRelease + logBudget, data = movies, nvmax = 5)
+best_subset <- regsubsets(log_domestic ~ log_prev + year + is_video_game + is_spring_release + log_budget + rotten_tomatoes + pocorn_meter, data = movies, nvmax = 7)
 sub_summary <- summary(best_subset)
 sub_summary
-
 data.frame(
-  Predictors = 1:5,
+  Predictors = 1:7,
   AdjR2      = round(sub_summary$adjr2, 4),
   Cp         = round(sub_summary$cp, 4),
   BIC        = round(sub_summary$bic, 4)
@@ -62,24 +48,29 @@ data.frame(
 Interpretation: It appears that a model with 2 predictors is the most optimal. Has lowest Cp and BIC, second highest R^2. The jump from predictors 2 to 3 is very small for R^2. 
 
 
+##Change this
 ```{r}
-# Quadratics (only continuous variables make sense)
+# Quadratics
 model_q1 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logPrevFilmDomestic^2), data = movies)
 model_q2 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logBudget^2), data = movies)
 
 # Interaction between the two winning predictors
 model_int <- lm(logDomesticTotal ~ logPrevFilmDomestic * logBudget, data = movies)
 
-# Base model to test against
+# Base Model
 model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)
 
 anova(model_base, model_q1)   # does logPrev² help?
 anova(model_base, model_q2)   # does logBudget² help?
 anova(model_base, model_int)  # does the interaction help?
 
-model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)
+model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)#change this
 ```
+
+
 Interpretation: Final model is logDomesticTotal ~ logPrevFilmDomestic + logBudget
+
+
 
 ```{r}
 library(car)
@@ -110,6 +101,5 @@ full_run <- exp(pred)
 day30_prediction <- full_run * 0.80  # adjust this ratio based on your data
 day30_prediction
 ```
-
 
 
