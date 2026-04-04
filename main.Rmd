@@ -1,7 +1,13 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
 ---
+
+Summary: We built a linear regression model using 27 animated sequels, predicting log domestic total from log previous film earnings and log budget (Adj. R² = 0.469). Applying a 0.80 multiplier for 30-day earnings, our model predicts Super Mario Galaxy will earn approximately $485 million domestically in its first 30 days.
+
+
 
 ```{r}
 library(tidyverse)
@@ -51,55 +57,55 @@ Interpretation: It appears that a model with 2 predictors is the most optimal. H
 ##Change this
 ```{r}
 # Quadratics
-model_q1 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logPrevFilmDomestic^2), data = movies)
-model_q2 <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget + I(logBudget^2), data = movies)
+model_q1 <- lm(log_domestic ~ log_prev + log_budget + I(log_prev^2), data = movies)
+model_q2 <- lm(log_domestic ~ log_prev + log_budget + I(log_budget^2), data = movies)
 
 # Interaction between the two winning predictors
-model_int <- lm(logDomesticTotal ~ logPrevFilmDomestic * logBudget, data = movies)
+model_int <- lm(log_domestic ~ log_prev * log_budget, data = movies)
 
 # Base Model
-model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)
+model_base <- lm(log_domestic ~ log_prev + log_budget, data = movies)
 
 anova(model_base, model_q1)   # does logPrev² help?
 anova(model_base, model_q2)   # does logBudget² help?
 anova(model_base, model_int)  # does the interaction help?
-
-model_base <- lm(logDomesticTotal ~ logPrevFilmDomestic + logBudget, data = movies)#change this
 ```
 
-
-Interpretation: Final model is logDomesticTotal ~ logPrevFilmDomestic + logBudget
-
+Interpretation: None of the quadratic terms nor the interaction term significantly improved the model (all p > 0.05), confirming that the base model with log_prev and log_budget is the most appropriate.
 
 
 ```{r}
 library(car)
+summary(model_base)
 vif(model_base)
-
-par(mfrow = c(2,2))
+par(mfrow = c(2, 2))
 plot(model_base)
-
 cooksd <- cooks.distance(model_base)
 plot(cooksd, type = "h", main = "Cook's Distance")
 abline(h = 4/nrow(movies), col = "red", lty = 2)
 text(which(cooksd > 4/nrow(movies)),
      cooksd[cooksd > 4/nrow(movies)],
-     labels = movies$Movie[cooksd > 4/nrow(movies)], cex = 0.7, pos = 4)
-
+     labels = movies$movie[cooksd > 4/nrow(movies)], cex = 0.7, pos = 4)
 shapiro.test(residuals(model_base))
 ```
 
+Interpretation of Findings: The final model, log_domestic ~ log_prev + log_budget, is statistically significant overall (F = 12.46, p < 0.001). Both predictors are significant: log_prev (p < 0.001) and log_budget (p = 0.025). The model explains about 46.9% of the variability in log domestic total (Adjusted R² = 0.4685). For every 1-unit increase in log of the previous film's domestic earnings, log domestic total increases by 0.776, holding budget constant. Similarly, a 1-unit increase in log budget is associated with a 0.433 increase in log domestic total, holding the previous film's performance constant. Both VIF values are approximately 1.04, which is extremely close to 1, indicating no meaningful multicollinearity between log_prev and log_budget. The predictors are essentially independent of each other. 
+
+Interpretation of Graphs: The residuals appear roughly randomly scattered around zero with no strong systematic pattern, suggesting the linearity assumption is reasonably satisfied. The red smoothing line is relatively flat. Observations 14 and 26 appear as potential outliers with large negative residuals and warrant further investigation.The standardized residuals follow the diagonal reference line closely across most of the range, supporting the normality assumption. Observations 26 and 14 deviate slightly at the lower tail, but the departure is not severe.
+
+Shapiro-Wilk Test: W = 0.965, p = 0.487. Since p > 0.05, we fail to reject the null hypothesis of normality. Combined with the Q-Q plot, there is no meaningful evidence that the normality assumption is violated. Note that with only n = 27 observations, this test has limited power, so the visual QQ plot provides additional reassurance.
+
+
 ```{r}
 mario_new <- data.frame(
-  logPrevFilmDomestic = log(574930000),
-  logBudget = log(175000000)
+  log_prev   = log(574930000),
+  log_budget = log(175000000)
 )
 pred <- predict(model_base, newdata = mario_new,
                 interval = "prediction", level = 0.95)
-
 full_run <- exp(pred)
-day30_prediction <- full_run * 0.80  # adjust this ratio based on your data
+day30_prediction <- full_run * 0.80
 day30_prediction
 ```
 
-
+Using the final model with the previous film's domestic earnings of $574,930,000 (The Super Mario Bros. Movie) and a production budget of $175,000,000, the model predicts a 30-day domestic total of approximately $485.3 million (95% prediction interval: $215.1 million to $1.095 billion). This was obtained by generating a full-run prediction on the log scale, back-transforming via exponentiation, and applying a 0.80 multiplier to approximate the 30-day earnings, consistent with the typical pattern for animated sequels where roughly 78–82% of total domestic revenue is earned within the first 30 days. The wide prediction interval reflects the inherent variability in animated sequel box office performance and the relatively small sample size, and should be interpreted with caution
