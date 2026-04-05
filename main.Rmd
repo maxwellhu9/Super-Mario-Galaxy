@@ -1,13 +1,23 @@
 ---
-title: "R Notebook"
+title: 'STOR 455 Group Project (Due 11:59pm on April 5th)'
+subtitle: "Luigi's Linear Models"
 output:
   pdf_document: default
   html_notebook: default
+  html_document:
+    df_print: paged
+  word_document: default
 ---
 
-Summary: We built a linear regression model using 27 animated sequels, predicting log domestic total from log previous film earnings and log budget (Adj. R² = 0.469). Applying a 0.80 multiplier for 30-day earnings, our model predicts Super Mario Galaxy will earn approximately $485 million domestically in its first 30 days.
+Maxwell Hu (730759980), Hye-Rynn Jeong (730813516), Tracy Huang (730748110)
 
+# The Prediction (Required)
+Our prediction of the cumulative domestic box office of "Super Mario Galaxy " by May 1, 2026 is \$485.3 million.
 
+# Summary of Justification (Required) 
+Summary: We built a linear regression model using 27 animated sequels, predicting log domestic total from log previous film earnings and log budget (Adj. R² = 0.469). Applying a 0.80 multiplier for 30-day earnings, our model predicts Super Mario Galaxy will earn approximately $485 million domestically in its first 30 days. This prediction is based on the strong positive relationships observed between the previous film's performance, budget, and domestic earnings in our sample of animated sequels. The model's predictors are statistically significant, and the assumptions of linear regression are reasonably satisfied.
+
+# Analysis
 
 ```{r}
 library(tidyverse)
@@ -16,7 +26,7 @@ library(stringr)
 library(DataExplorer)
 library(funModeling)
 
-movies <- read.csv('/Users/tracy/STOR 455/Super-Mario-Galaxy/data/Animated Movies - Sheet1.csv') |> 
+movies <- read.csv('data/animated_movies.csv') |> 
   clean_names()
 ```
 
@@ -108,4 +118,4 @@ day30_prediction <- full_run * 0.80
 day30_prediction
 ```
 
-Using the final model with the previous film's domestic earnings of $574,930,000 (The Super Mario Bros. Movie) and a production budget of $175,000,000, the model predicts a 30-day domestic total of approximately $485.3 million (95% prediction interval: $215.1 million to $1.095 billion). This was obtained by generating a full-run prediction on the log scale, back-transforming via exponentiation, and applying a 0.80 multiplier to approximate the 30-day earnings, consistent with the typical pattern for animated sequels where roughly 78–82% of total domestic revenue is earned within the first 30 days. The wide prediction interval reflects the inherent variability in animated sequel box office performance and the relatively small sample size, and should be interpreted with caution
+Using the final model with the previous film's domestic earnings of \$574,930,000 (The Super Mario Bros. Movie) and a production budget of \$175,000,000, the model predicts a 30-day domestic total of approximately \$485.3 million (95% prediction interval: \$215.1 million to \$1.095 billion). This was obtained by generating a full-run prediction on the log scale, back-transforming via exponentiation, and applying a 0.80 multiplier to approximate the 30-day earnings, consistent with the typical pattern for animated sequels where roughly 78–82% of total domestic revenue is earned within the first 30 days. The wide prediction interval reflects the inherent variability in animated sequel box office performance and the relatively small sample size, and should be interpreted with caution.
